@@ -43,6 +43,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'lifetest.urls'
+WSGI_APPLICATION = 'lifetest.wsgi.application'
 
 TEMPLATES = [
     {
