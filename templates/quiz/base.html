@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'quiz/style.css' %}">
+    <meta charset="UTF-8">
+    <title>Life in the UK Trainer</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fafafa;
+        }
+        header {
+            margin-bottom: 20px;
+        }
+        nav a {
+            margin-right: 10px;
+        }
+        .banner {
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .banner-correct { background: #c8f7c5; color: #2d6628; }
+        .banner-incorrect { background: #f7c8c8; color: #662828; }
+
+        /* Stats + progress bar */
+        .stats-box {
+            background: #f0f0f0;
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+        }
+        .progress-container {
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            height: 16px;
+            margin-top: 6px;
+        }
+        .progress-bar {
+            height: 100%;
+            background: #007bff;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* Buttons */
+        button, .btn {
+            padding: 8px 14px;
+            background: #007bff;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        button:hover, .btn:hover {
+            background: #0056b3;
+        }
+
+        .reader-btn {
+            margin-top: 10px;
+        }
+    </style>
+
+    <!-- <script>
+        (function () {
+    let cachedVoices = [];
+    let preferredVoice = null;
+
+    function loadVoices() {
+      cachedVoices = window.speechSynthesis.getVoices() || [];
+
+      // Try to pick a nice UK English voice if available
+      preferredVoice =
+        cachedVoices.find(v => v.name.includes("UK") || v.name.includes("British")) ||
+        cachedVoices.find(v => v.lang === "en-GB") ||
+        cachedVoices.find(v => v.lang && v.lang.startsWith("en")) ||
+        cachedVoices[0] ||
+        null;
+    }
+
+    // Some browsers load voices async
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+
+    window.speakElement = function (elementId) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+
+      const text = el.innerText || el.textContent || "";
+      if (!text.trim()) return;
+
+      // stop anything already speaking
+      window.speechSynthesis.cancel();
+
+      const utter = new SpeechSynthesisUtterance(text);
+
+      // use our chosen voice
+      if (preferredVoice) {
+        utter.voice = preferredVoice;
+      }
+
+      // make it sound a bit more natural
+      utter.rate = 0.9;  // 1.0 = normal; 0.8–0.9 is calmer
+      utter.pitch = 1.5;  // normal pitch
+      utter.volume = 1.0; // full volume, let system control loudness
+
+      window.speechSynthesis.speak(utter);
+    };
+  })();
+        
+    </script> -->
+   <script>
+  // Simple helper to read out any element's text using your /tts/ view
+  function speakElement(elementId) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+
+      const text = el.innerText || el.textContent || "";
+      if (!text.trim()) return;
+
+      const url = "/tts/?text=" + encodeURIComponent(text);
+
+      const audio = new Audio(url);
+      audio.play().catch(err => {
+          console.error("Audio play failed", err);
+      });
+  }
+</script>
+</head>
+
+<body>
+<header>
+    <h1>Life in the UK Trainer</h1>
+    <nav>
+        <a href="/">🏠 Home</a>
+        <a href="/quiz/all/">All Questions</a>
+        <a href="/quiz/hardest/">Hardest Questions</a>
+        <a href="/quiz/book_based/">Book Based </a>
+        <a href="/practice/">Practice sections</a>
+        <a href="/drill/all/">It's Not Over!</a>
+        <a href="/upload/">Upload Questions</a>
+        <a href="/book_home">book home</a>
+    </nav>
+    <hr>
+</header>
+
+
+
+{% block content %}
+<div class="stats-box">
+    <h2>Book Based Practice</h2>
+    <p>Practice questions taken directly from the Life in the UK book.</p>
+    <p>Choose a mode:</p>
+
+    <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;">
+        <a class="btn" href="{% url 'book_play' %}?mode=normal">
+            📘 Normal book mode
+        </a>
+        <a class="btn" href="{% url 'book_play' %}?mode=cant">
+            ✅ Can't go wrong mode
+        </a>
+    </div>
+
+    <p style="margin-top:10px; font-size:0.9rem;">
+        <strong>Normal mode:</strong> you can move on even if you got the
+        question wrong.<br>
+        <strong>Can't go wrong mode:</strong> you must find the correct
+        answer before you can go to the next question.
+    </p>
+</div>
+{% endblock %}
+</body>
+</html>
+
+

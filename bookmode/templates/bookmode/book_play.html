@@ -1,0 +1,91 @@
+{# bookmode/templates/bookmode/book_play.html #}
+{% extends "quiz/base.html" %}
+
+{% block content %}
+<h2 class="page-title">
+    Book-based practice
+    {% if cant_go_wrong %}<small>(Can't go wrong mode)</small>{% endif %}
+</h2>
+
+{% if question %}
+  <div id="quiz-block" class="quiz-block">
+
+    <div class="question-header"
+        style="display:flex; align-items:center; justify-content:space-between;">
+      <p><strong>Question:</strong></p>
+      <button type="button"
+              class="reader-btn"
+              onclick="speakElement('qa-read')">
+        🔊
+      </button>
+    </div>
+
+    <div id="qa-read">
+      <p id="question-text">{{ question.question|linebreaksbr }}</p>
+
+      <form method="post" class="quiz-form">
+        {% csrf_token %}
+        <input type="hidden" name="question_id" value="{{ question.id }}">
+        <input type="hidden" name="seed" value="{{ seed|default:0 }}">
+        <input type="hidden" name="cant_go_wrong" value="{% if cant_go_wrong %}1{% else %}0{% endif %}">
+              
+
+        <fieldset>
+          <legend>Choose one answer:</legend>
+
+          {% for opt in choices %}
+            <label class="option-pill
+              {% if selected %} option-disabled{% endif %}
+              {% if selected and opt == selected and is_correct %} option-correct{% endif %}
+              {% if selected and opt == selected and not is_correct %} option-wrong{% endif %}
+              {% if selected and not is_correct and opt == question.correct_answer %} option-correct{% endif %}">
+              <input type="radio"
+                    name="choice"
+                    value="{{ opt }}"
+                    {% if selected and opt == selected %}checked{% endif %}
+                    {% if selected and not cant_go_wrong and not is_correct %}disabled{% endif %}>
+              <span class="option-text">{{ opt|linebreaksbr }}</span>
+            </label>
+          {% endfor %}
+        </fieldset>
+
+        {% if not selected %}
+          {# First time on this question #}
+          <button type="submit" class="btn btn-primary btn-full">
+            Check answer
+          </button>
+        {% else %}
+          <div class="feedback-strip {% if is_correct %}feedback-ok{% else %}feedback-bad{% endif %}">
+            {% if is_correct %}
+              ✅ Correct
+            {% else %}
+              ❌ Incorrect – try again
+            {% endif %}
+          </div>
+
+          {% if cant_go_wrong %}
+            {% if is_correct %}
+              <a class="btn btn-primary btn-full"
+                href="{% url 'book_play' %}?mode=cant">
+                Next question
+              </a>
+            {% else %}
+              <button type="submit" class="btn btn-primary btn-full">
+                Try again
+              </button>
+            {% endif %}
+          {% else %}
+            <a class="btn btn-primary btn-full"
+              href="{% url 'book_play' %}?mode=normal">
+              Next question
+            </a>
+          {% endif %}
+        {% endif %}
+      </form>
+    </div>
+  </div>
+{% else %}
+  <p>No book-based questions found yet. Add some <strong>BookModeSession</strong>
+    rows in the admin.</p>
+{% endif %}
+{% endblock %}

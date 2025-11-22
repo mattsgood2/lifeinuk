@@ -1,0 +1,64 @@
+{% extends "quiz/base.html" %}
+{% block content %}
+<h2>It's Not Over! – Perfect run mode ({{ mode|title }})</h2>
+
+<div class="stats-box">
+  <strong>Total questions in this mode:</strong> {{ total }}<br>
+  <strong>Answered this session (all runs):</strong> {{ answered }}<br>
+  <strong>Correct:</strong> {{ correct_count }}<br>
+  <strong>Incorrect:</strong> {{ incorrect_count }}<br>
+  {% if accuracy %}
+    <strong>Accuracy:</strong> {{ accuracy }}%
+  {% else %}
+    <strong>Accuracy:</strong> n/a
+  {% endif %}
+
+  <div class="progress-container" aria-label="Progress through this perfect run">
+    <div class="progress-bar" style="width: {{ progress_percent }}%;"></div>
+  </div>
+</div>
+
+{% if finished %}
+  <div class="banner banner-correct">
+    🎉 Congratulations! You completed this section with no mistakes in this run.
+  </div>
+  <p><a class="btn" href="{% url 'drill_quiz' mode %}">Start a new perfect run</a></p>
+
+{% elif failed_this_run %}
+  <div class="banner banner-incorrect">
+    ❌ You got a question wrong in this run. To pass, you must answer every question correctly in one go.
+  </div>
+  <p><a class="btn" href="{% url 'drill_quiz' mode %}">Restart this section</a></p>
+
+{% elif question %}
+  <div id="quiz-block">
+    <p><strong>Question:</strong></p>
+    <p id="question-text">{{ question.question_text|linebreaksbr }}</p>
+
+    <form method="post">
+      {% csrf_token %}
+      <fieldset>
+        <legend>Choose one answer:</legend>
+        {% for opt in choices %}
+        <p>
+          <label>
+            <input type="radio" name="choice" value="{{ opt }}" required>
+            {{ opt|linebreaksbr }}
+          </label>
+        </p>
+        {% endfor %}
+      </fieldset>
+
+      <button type="submit">Submit answer</button>
+    </form>
+
+    <p class="reader-btn">
+      <button type="button" onclick="speakElement('quiz-block')">🔊 Read question &amp; options</button>
+    </p>
+  </div>
+{% else %}
+  <p>No questions available for this mode. Try uploading some first.</p>
+{% endif %}
+
+{% endblock %}
+

@@ -1,0 +1,43 @@
+{% extends "quiz/base.html" %}
+
+{% block content %}
+<h2 class="page-title">Practice menu</h2>
+<p>Select a mode to practise:</p>
+
+<div class="practice-card">
+  <label for="mode-select"><strong>Question set:</strong></label>
+  <select id="mode-select" class="mode-select"
+          onchange="if (this.value) { window.location.href = this.value; }">
+    <option value="">-- Choose a mode --</option>
+
+    <!-- Topic based -->
+    <optgroup label="By topic">
+      <option value="{% url 'quiz_mc' 'all' %}">All questions (mixed)</option>
+      <option value="{% url 'quiz_mc' 'history' %}">History only</option>
+      <option value="{% url 'quiz_mc' 'government' %}">Government &amp; Politics</option>
+      <option value="{% url 'quiz_mc' 'culture' %}">Culture &amp; Society</option>
+      <option value="{% url 'quiz_mc' 'geography' %}">Geography &amp; Places</option>
+    </optgroup>
+
+    <!-- Difficulty / type -->
+    <optgroup label="By difficulty / type">
+      <option value="{% url 'quiz_mc' 'practice' %}">Practice mix</option>
+      <option value="{% url 'quiz_mc' 'common' %}">Most common questions</option>
+      <option value="{% url 'quiz_mc' 'hardest' %}">Hardest questions</option>
+      <option value="{% url 'quiz_mc' 'cheatsheet' %}">Cheat sheet questions</option>
+    </optgroup>
+  </select>
+
+  <p class="hint-text">
+    Tip: you can still change sub-sections (Stone Age, Tudors, etc.) on the quiz
+    page using the subcategory bar.
+  </p>
+</div>
+
+<div class="practice-card">
+  <h3>Exam mode</h3>
+  <p>Ready to simulate the real test? Try a 24-question timed exam.</p>
+  <a href="{% url 'exam_quiz' %}" class="btn primary-btn">Start exam</a>
+</div>
+{% endblock %}
+

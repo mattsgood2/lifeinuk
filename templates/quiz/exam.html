@@ -1,0 +1,202 @@
+{% extends "quiz/base.html" %}
+
+{% block content %}
+
+<h2 class="page-title">Exam Mode – Life in the UK</h2>
+
+{# ====== TOP BAR: TIMER + COUNTER + PROGRESS ====== #}
+{% if not finished %}
+  <div class="exam-header">
+    <div><strong>Time left:</strong>
+      <span id="timer"
+            data-min="{{ minutes }}"
+            data-sec="{{ seconds }}">
+        {{ minutes }}:{% if seconds < 10 %}0{% endif %}{{ seconds }}
+      </span>
+    </div>
+    <div><strong>Question:</strong> {{ current_index }} / {{ total }}</div>
+  </div>
+
+  <div class="progress-container" aria-label="Exam progress">
+    <div class="progress-bar" style="width: {{ progress_percent }}%;"></div>
+  </div>
+{% endif %}
+
+{# ====== EXAM IN PROGRESS ====== #}
+{% if question and not finished %}
+
+  <div id="quiz-block" class="quiz-block">
+
+    <div class="question-header">
+      <p><strong>Question:</strong></p>
+      <button type="button"
+              class="reader-btn"
+              onclick="speakElement('qa-read')">
+        🔊
+      </button>
+    </div>
+
+    <div id="qa-read">
+      <p id="question-text">{{ question.question_text|linebreaksbr }}</p>
+
+      <form method="post" class="quiz-form">
+        {% csrf_token %}
+        <input type="hidden" name="question_id" value="{{ question.id }}">
+        <input type="hidden" name="index" value="{{ current_index }}">
+        <input type="hidden" name="time_left"
+              id="time-left-field"
+              value="{{ time_left }}">
+        {% if seed %}
+          <input type="hidden" name="seed" value="{{ seed }}">
+        {% endif %}
+
+        <fieldset>
+          <legend>Choose one answer:</legend>
+
+          {% for opt in choices %}
+            <label class="option-pill
+                  {% if selected %} option-disabled{% endif %}
+                  {% if selected and opt == selected and is_correct %} option-correct{% endif %}
+                  {% if selected and opt == selected and not is_correct %} option-wrong{% endif %}
+                  {% if selected and not is_correct and opt == question.answer_text %} option-correct{% endif %}">
+              <input type="radio"
+                    name="choice"
+                    value="{{ opt }}"
+                    {% if selected and opt == selected %}checked{% endif %}
+                    {% if selected %}disabled{% endif %}>
+              <span class="option-text">{{ opt|linebreaksbr }}</span>
+            </label>
+          {% endfor %}
+        </fieldset>
+
+        {% if not selected %}
+          <button type="submit"
+                  name="check"
+                  value="1"
+                  class="btn btn-primary btn-full">
+            Submit answer
+          </button>
+
+          <button type="button"
+                  class="btn btn-secondary btn-full"
+                  id="pause-btn">
+            Pause (screen only)
+          </button>
+
+        {% else %}
+          <div class="feedback-strip {% if is_correct %}feedback-ok{% else %}feedback-bad{% endif %}">
+            {% if is_correct %}
+              ✅ Correct
+            {% else %}
+              ❌ Incorrect
+            {% endif %}
+          </div>
+
+          <button type="submit"
+                  name="next"
+                  value="1"
+                  class="btn btn-primary btn-full">
+            Next question
+          </button>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+
+{# ====== EXAM FINISHED ====== #}
+{% elif finished %}
+
+  <div class="exam-results">
+    <h3>Exam finished</h3>
+
+    <p><strong>Total questions:</strong> {{ total }}</p>
+    <p><strong>Correct:</strong> {{ correct }}</p>
+    <p><strong>Incorrect:</strong> {{ incorrect }}</p>
+
+    {% if passed %}
+      <p class="pass-msg">🎉 You passed this mock exam!</p>
+    {% else %}
+      <p class="fail-msg">❌ You did not pass this time.</p>
+    {% endif %}
+
+    <a href="{% url 'exam_mode' %}" class="btn btn-primary btn-full">
+      Try another exam
+    </a>
+
+    {% if review %}
+      <hr>
+      <h4>Review your answers</h4>
+      <p class="small-note">
+        Each question shows your answer, the correct answer, and whether you were right.
+      </p>
+
+      <div class="review-list">
+        {% for item in review %}
+          <div class="review-item">
+            <p><strong>Q{{ forloop.counter }}.</strong> {{ item.question|linebreaksbr }}</p>
+            <p>
+              <strong>Your answer:</strong>
+              <span class="{% if item.is_correct %}review-ok{% else %}review-bad{% endif %}">
+                {{ item.your_answer|default:"(no answer)" }}
+              </span>
+            </p>
+            {% if not item.is_correct %}
+              <p><strong>Correct answer:</strong> {{ item.correct_answer|linebreaksbr }}</p>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+
+{% else %}
+
+  <p>No exam questions available. Check that you have imported some questions.</p>
+
+{% endif %}
+
+{# ====== TIMER & PAUSE JS ====== #}
+<script>
+(function () {
+  const timerEl = document.getElementById("timer");
+  if (!timerEl) return;
+
+  let paused = false;
+  const pauseBtn = document.getElementById("pause-btn");
+  const hiddenTime = document.getElementById("time-left-field");
+
+  let min = parseInt(timerEl.getAttribute("data-min") || "0", 10);
+  let sec = parseInt(timerEl.getAttribute("data-sec") || "0", 10);
+  let totalSec = min * 60 + sec;
+
+  function formatTime(s) {
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return m + ":" + (r < 10 ? "0" + r : r);
+  }
+
+  function tick() {
+    if (paused) return;
+    if (totalSec <= 0) {
+      timerEl.textContent = "0:00";
+      if (hiddenTime) hiddenTime.value = 0;
+      return;
+    }
+    totalSec -= 1;
+    timerEl.textContent = formatTime(totalSec);
+    if (hiddenTime) hiddenTime.value = totalSec;
+  }
+
+  setInterval(tick, 1000);
+
+  if (pauseBtn) {
+    pauseBtn.addEventListener("click", function () {
+      paused = !paused;
+      pauseBtn.textContent = paused ? "Resume" : "Pause (screen only)";
+    });
+  }
+})();
+</script>
+
+{% endblock %}
+

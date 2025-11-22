@@ -1,0 +1,25 @@
+{% extends "quiz/base.html" %}
+
+{% block content %}
+<div class="stats-box">
+    <h2>Book Based Practice</h2>
+    <p>Practice questions taken directly from the Life in the UK book.</p>
+    <p>Choose a mode:</p>
+
+    <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;">
+        <a class="btn" href="{% url 'book_play' %}?mode=normal">
+            📘 Normal book mode
+        </a>
+        <a class="btn" href="{% url 'book_play' %}?mode=cant">
+            ✅ Can't go wrong mode
+        </a>
+    </div>
+
+    <p style="margin-top:10px; font-size:0.9rem;">
+        <strong>Normal mode:</strong> you can move on even if you got the
+        question wrong.<br>
+        <strong>Can't go wrong mode:</strong> you must find the correct
+        answer before you can go to the next question.
+    </p>
+</div>
+{% endblock %}

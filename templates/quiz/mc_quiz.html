@@ -1,0 +1,156 @@
+{% extends "quiz/base.html" %}
+
+{% block content %}
+
+<h2 class="page-title">Multiple-choice practice – {{ mode|title }}</h2>
+
+{# ---------- Question-set (subcategory) + topic + search ---------- #}
+{% if subcategories %}
+  <form method="get" class="filter-bar">
+    <label>
+      Question set:
+      <select name="sub" onchange="this.form.submit()">
+        <option value="" {% if not current_sub %}selected{% endif %}>All question sets</option>
+        {% for sub in subcategories %}
+          <option value="{{ sub }}" {% if current_sub == sub %}selected{% endif %}>{{ sub }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>
+      Topic:
+      <select name="topic" onchange="this.form.submit()">
+        <option value="" {% if not current_topic %}selected{% endif %}>All topics</option>
+        {% for key, label in topic_choices %}
+          <option value="{{ key }}" {% if current_topic == key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>
+      Search:
+      <input
+        type="search"
+        name="q"
+        value="{{ request.GET.q }}"
+        placeholder="e.g. king, WW2, Anglo-Saxon">
+    </label>
+
+    <button type="submit">Filter</button>
+  </form>
+{% endif %}
+
+{# ---------- Stats ---------- #}
+<div class="stats-box">
+  <div><strong>Total questions:</strong> {{ total }}</div>
+  <div><strong>Answered:</strong> {{ answered }}</div>
+  <div><strong>Correct:</strong> {{ correct_count }}</div>
+  <div><strong>Incorrect:</strong> {{ incorrect_count }}</div>
+  <div>
+    <strong>Accuracy:</strong>
+    {% if accuracy %}{{ accuracy }}%{% else %}n/a{% endif %}
+  </div>
+
+  <div class="progress-container" aria-label="Progress">
+    <div class="progress-bar" style="width: {{ progress_percent }}%;"></div>
+  </div>
+
+  {% if request.user.is_authenticated and request.user.is_staff %}
+    <form method="post" style="margin-top: 8px;">
+      {% csrf_token %}
+      <input type="hidden" name="reset_stats" value="1">
+      <button type="submit" class="btn btn-secondary">
+        Reset stats for this mode (admin only)
+      </button>
+    </form>
+  {% endif %}
+</div>
+
+{# ---------- Question + answers ---------- #}
+{% if question %}
+  <div id="quiz-block" class="quiz-block">
+
+    <div class="question-header">
+      <p><strong>Question:</strong></p>
+      <button type="button"
+              class="reader-btn"
+              onclick="speakElement('qa-read')">
+        🔊
+      </button>
+    </div>
+
+    <div id="qa-read">
+      <p id="question-text">{{ question.question_text|linebreaksbr }}</p>
+
+      <form method="post" class="quiz-form">
+        {% csrf_token %}
+        <input type="hidden" name="question_id" value="{{ question.id }}">
+        <input type="hidden" name="seed" value="{{ seed|default:0 }}">
+
+        <fieldset>
+          <legend>Choose one answer:</legend>
+
+          {% for opt in choices %}
+            <label class="option-pill
+                  {% if selected %} option-disabled{% endif %}
+                  {% if selected and opt == selected and is_correct %} option-correct{% endif %}
+                  {% if selected and opt == selected and not is_correct %} option-wrong{% endif %}
+                  {% if selected and not is_correct and opt == question.answer_text %} option-correct{% endif %}">
+              <input type="radio"
+                    name="choice"
+                    value="{{ opt }}"
+                    {% if selected and opt == selected %}checked{% endif %}
+                    {% if selected %}disabled{% endif %}>
+              <span class="option-text">{{ opt|linebreaksbr }}</span>
+            </label>
+          {% endfor %}
+        </fieldset>
+
+        {# Before answering: only "Check answer" #}
+        {% if not selected %}
+          <button type="submit" class="btn btn-primary btn-full">
+            Check answer
+          </button>
+
+        {# After answering: feedback + "Next question" link (GET) #}
+        {% else %}
+          <div class="feedback-strip {% if is_correct %}feedback-ok{% else %}feedback-bad{% endif %}">
+            {% if is_correct %}
+              ✅ Correct
+            {% else %}
+              ❌ Incorrect
+            {% endif %}
+          </div>
+
+          {# IMPORTANT: this is a plain link, not a submit button #}
+          <a class="btn btn-primary btn-full" href="{% url 'quiz_mc' mode %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}">
+            Next question
+          </a>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+{% else %}
+  <p>No questions available for this mode. Try uploading some first.</p>
+{% endif %}
+
+<script>
+  function playQuestionTTS() {
+    const block = document.getElementById('qa-read');
+    if (!block) return;
+
+    // Grab question + options text
+    const text = block.innerText || block.textContent || '';
+    if (!text.trim()) return;
+
+    const url = "{% url 'tts_view' %}?text=" + encodeURIComponent(text);
+
+    const audio = new Audio(url);
+    audio.play().catch(err => {
+      console.error('TTS playback failed:', err);
+    });
+  }
+</script>
+
+{% endblock %}
+
