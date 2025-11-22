@@ -6,9 +6,6 @@ from django.views.generic import RedirectView
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('quiz.urls')),
-
-    path("", RedirectView.as_view(url="/quiz/practice/", permanent=False)),
-
     path('book_home/', include('bookmode.urls')),
-    # path('book_home/', include('bookmode.urls')),
+    
 ]
