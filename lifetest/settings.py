@@ -5,16 +5,17 @@ import dj_database_url
 
 BASE_DIR =  Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key")
 
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost", "192.168.0.77", "=lifeinuktest.herokuapp.com",]
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "192.168.0.77", "lifeinuktest-d53498dddafc.herokuapp.com",]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://192.168.0.77:8000",
     "http://192.168.0.77"
     "http://localhost:8000",
+    "https://lifeinuktest-d53498dddafc.herokuapp.com",
     
     ]
 
