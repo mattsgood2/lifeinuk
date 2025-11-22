@@ -61,7 +61,6 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'lifetest.wsgi.application'
 
 DATABASES = {
     'default': {
