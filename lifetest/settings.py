@@ -1,12 +1,11 @@
 import os
 from pathlib import Path
 import dj_database_url
-from pathlib import Path
 
-BASE_DIR =  os.getenv("DEBUG", "False") == "True" 
-# Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'change-me-in-production'
+BASE_DIR =  Path(__file__).resolve().parent.parent
+
+SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = True
 ALLOWED_HOSTS = ["127.0.0.1", "localhost", "192.168.0.77", "lifeinuktest.herokuapp.com",]
 
@@ -28,6 +27,7 @@ INSTALLED_APPS = [
     'quiz',
     'bookmode'
 ]
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
