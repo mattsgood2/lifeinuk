@@ -3,11 +3,12 @@ from pathlib import Path
 import dj_database_url
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR =  os.getenv("DEBUG", "False") == "True" 
+# Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'change-me-in-production'
 DEBUG = True
-ALLOWED_HOSTS = ["127.0.0.1", "localhost", "192.168.0.77", ".herokuapp.com",]
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "192.168.0.77", "lifeinuktest.herokuapp.com",]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://192.168.0.77:8000",
