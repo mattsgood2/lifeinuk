@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'whitenoise.runserver_nostatic',
     'quiz',
     'bookmode'
 ]
@@ -77,9 +78,10 @@ STATICFILE_DIRS = [
     BASE_DIR / "static",
 ]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-INSTALLED_APPS += ['whitenoise.runserver_nostatic']
-MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+# INSTALLED_APPS += ['whitenoise.runserver_nostatic']
+# MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
 SESSION_COOKIE_SAMESITE = None
 SESSION_COOKIE_SECURE = False
