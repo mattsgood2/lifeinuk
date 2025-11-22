@@ -1,1 +1,1 @@
-web: gunicorn lifetest_django_mc_project.wsgi
+web: gunicorn lifetest.wsgi
