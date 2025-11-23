@@ -1,0 +1,62 @@
+{% extends "quiz/base.html" %}
+
+{% block content %}
+<div class="stats-box">
+  <h2>Book listening mode</h2>
+  {% if total > 0 %}
+    <p>Question {{ index }} of {{ total }}</p>
+  {% else %}
+    <p>No book-mode questions found yet.</p>
+  {% endif %}
+</div>
+
+{% if question %}
+  <div class="quiz-block">
+
+    <div class="question-header" style="display:flex; align-items:center; justify-content:space-between;">
+      <p><strong>Listening:</strong> question and correct answer only</p>
+
+      <!-- main play button -->
+      <button type="button"
+              class="reader-btn"
+              onclick="speakElement('listen-tts')">
+        🔊 Play
+      </button>
+    </div>
+
+    <!-- Visible text (if you want to read along) -->
+    <p><strong>Question:</strong> {{ question.question_text|linebreaksbr }}</p>
+    <p><strong>Correct answer:</strong> {{ question.correct_answer|linebreaksbr }}</p>
+
+    <!-- Hidden combined text JUST for TTS -->
+    <div id="listen-tts" style="display:none;">
+      Question {{ index }}.
+      {{ question.question_text|striptags }}
+      Correct answer:
+      {{ question.correct_answer|striptags }}.
+    </div>
+
+    <form method="post" style="margin-top:15px;">
+      {% csrf_token %}
+      <button class="btn" name="action" value="prev" type="submit">⬅ Previous</button>
+      <button class="btn" name="action" value="next" type="submit">Next ➡</button>
+      <button class="btn" name="action" value="reset" type="submit">🔁 Reset to start</button>
+    </form>
+
+  </div>
+
+  <script>
+    // Optional "auto play" after interaction:
+    // Mobile browsers usually block sound until you've tapped at least once,
+    // but once you have, this will auto-play whenever you go to the next question.
+    window.addEventListener('load', function () {
+      // comment this line out if it annoys you:
+      speakElement('listen-tts');
+    });
+  </script>
+
+{% else %}
+  <p>You don’t have any BookModeSession questions yet.</p>
+{% endif %}
+{% endblock %}
+
