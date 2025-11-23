@@ -22,6 +22,11 @@
               onclick="speakElement('listen-tts')">
         🔊 Play
       </button>
+      <button type="button"
+              class="reader-btn"
+              onclick="speakElement('listen-all-tts')">
+        🔊 Play All
+      </button>
     </div>
 
     <!-- Visible text (if you want to read along) -->
@@ -34,6 +39,17 @@
       {{ question.question_text|striptags }}
       Correct answer:
       {{ question.correct_answer|striptags }}.
+    </div>
+
+    <!-- Hidden combined text for Plat all TTS -->
+    <div id="listen-all-tts" style="display:none;">
+        {% for item in all_questions %}
+
+      Question {{ forloop.counter }}.
+      {{ item.question_text|striptags }}
+      Correct answer:
+      {{ item.correct_answer|striptags }}.
+      {% endfor %}
     </div>
 
     <form method="post" style="margin-top:15px;">

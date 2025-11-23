@@ -32,49 +32,49 @@ def book_play(request):
 def book_listen(request):
     """
     Simple listening drill:
-    - walks through all BookModeSession questions in id order
-    - only uses question + correct_answer
+    - walks through all BookModeSession questions in id/order_index order
+    - only uses question_text + correct_answer
     - remembers current index in the Django session
     """
-
     qs = BookModeSession.objects.order_by("id")
     total = qs.count()
 
+    # If there are no questions, just show a message
     if total == 0:
         return render(
             request,
             "bookmode/book_listen.html",
-            {"question": None, "index": 0, "total": 0},
+            {
+                "question": None,
+                "index": 0,
+                "total": 0,
+                "all_questions": [],
+            },
         )
 
-    # read current index from the session (per browser)
-    idx = request.session.get("book_listen_index", 0)
+    # Read current index from session
+    idx = request.session.get("listen_index", 0)
 
-    # handle buttons
+    # Handle buttons
     if request.method == "POST":
         action = request.POST.get("action")
         if action == "next":
-            idx += 1
+            idx = (idx + 1) % total
         elif action == "prev":
-            idx -= 1
+            idx = (idx - 1) % total
         elif action == "reset":
             idx = 0
 
-        # keep in range
-        if idx < 0:
-            idx = 0
-        if idx >= total:
-            idx = total - 1
+        request.session["listen_index"] = idx
 
-        request.session["book_listen_index"] = idx
-
-    # fetch the question for the (possibly updated) index
-    question = qs[idx]
+    # Get the current question
+    q = qs[idx]
 
     context = {
-        "question": question,
-        "index": idx + 1,  # 1-based for display
+        "question": q,
+        "index": idx + 1,      # 1-based for display
         "total": total,
+        "all_questions": qs,  # <-- THIS is what Play All needs
     }
     return render(request, "bookmode/book_listen.html", context)
 
