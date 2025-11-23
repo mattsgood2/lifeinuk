@@ -3,6 +3,7 @@
 import os
 import random
 import re
+import string
 
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -18,6 +19,23 @@ from gtts import gTTS
 
 EXAM_QUESTION_COUNT = 24          # questions per exam
 EXAM_DURATION_SECONDS = 45 * 60  # 45 minutes
+
+
+# ----------------- HELPER: NORMALISE ANSWERS -----------------
+
+def normalise_answer(value: str) -> str:
+    """
+    Normalise answers for comparison:
+      - handle None safely
+      - strip spaces
+      - lowercase
+      - strip punctuation at both ends
+    So:
+      'True.'  ' TRUE! '  'true??'  all become 'true'
+    """
+    if not value:
+        return ""
+    return value.strip().lower().strip(string.punctuation)
 
 
 # ----------------- HELPER: QUESTION POOL BY MODE -----------------
@@ -233,7 +251,8 @@ def mc_quiz(request, mode):
         # -------- TRUE / FALSE --------
         if is_true_false_question():
             options = ["True", "False"]
-            correct_clean = "True" if "true" in norm_answer else "False"
+            # safer: only treat exact 'true' as True
+            correct_clean = "True" if norm_answer == "true" else "False"
             if correct_clean not in options:
                 options.append(correct_clean)
             rng.shuffle(options)
@@ -332,7 +351,7 @@ def mc_quiz(request, mode):
     # ------------ MAIN PRACTICE FLOW ------------
 
     if total > 0:
-    # --- NEXT QUESTION BUTTON ---
+        # --- NEXT QUESTION BUTTON ---
         if request.method == "POST" and "next" in request.POST:
             # Just pick a new random question; don't change stats
             question = random.choice(list(qs))
@@ -357,8 +376,15 @@ def mc_quiz(request, mode):
 
             if question:
                 choices = build_choices_with_seed(question, seed)
-                correct_answer = (question.answer_text or "").strip()
-                is_correct = (selected == correct_answer)
+
+                # NORMALISED, CASE/PUNCTUATION-INSENSITIVE COMPARISON
+                correct_answer_raw = (question.answer_text or "")
+                correct_answer = correct_answer_raw.strip()
+
+                selected_norm = normalise_answer(selected or "")
+                correct_norm = normalise_answer(correct_answer)
+
+                is_correct = (selected_norm == correct_norm)
 
                 if is_correct:
                     request.session[counter_key_correct] += 1
@@ -404,9 +430,6 @@ def mc_quiz(request, mode):
         "topic_choices": topic_choices,
         "search_query": search_query,
     })
-
-
-
 
 
 # ----------------- EXAM MODE -----------------
@@ -561,8 +584,15 @@ def exam_quiz(request):
             seed = 0
 
         choices = build_choices(question, seed)
-        correct_answer = (question.answer_text or "").strip()
-        is_correct = (selected == correct_answer)
+
+        # NORMALISED, CASE/PUNCTUATION-INSENSITIVE COMPARISON
+        correct_answer_raw = (question.answer_text or "")
+        correct_answer = correct_answer_raw.strip()
+
+        selected_norm = normalise_answer(selected or "")
+        correct_norm = normalise_answer(correct_answer)
+
+        is_correct = (selected_norm == correct_norm)
 
         if is_correct:
             correct_count += 1
@@ -622,6 +652,7 @@ def exam_quiz(request):
         "review": [],
     })
 
+
 def tts_view(request):
     """
     Simple TTS endpoint.
@@ -646,4 +677,3 @@ def tts_view(request):
     response = FileResponse(audio_file, content_type="audio/mpeg")
     response["Content-Disposition"] = 'inline; filename="tts.mp3"'
     return response
-

@@ -74,12 +74,6 @@
     transform: translateY(-1px);
   }
 
-  .reader-btn:active {
-    transform: translateY(0);
-    box-shadow: none;
-  }
-
-  /* Pause button slightly different colour */
   .reader-btn.pause-btn {
     background: #6c757d;
     box-shadow: 0 2px 4px rgba(108,117,125,0.3);
@@ -87,6 +81,30 @@
 
   .reader-btn.pause-btn:hover {
     background: #5b636a;
+  }
+
+  /* Speed slider section */
+  .speed-control {
+    margin-top: .75rem;
+    font-size: .9rem;
+    color: #444;
+  }
+
+  .speed-control label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: .25rem;
+    font-weight: 600;
+  }
+
+  .speed-control span#tts-speed-value {
+    font-weight: 700;
+    color: #111;
+  }
+
+  .speed-control input[type="range"] {
+    width: 100%;
   }
 
   #qa-counter {
@@ -126,46 +144,23 @@
     transition: background .15s ease, transform .1s ease;
   }
 
-  .quiz-actions .btn:hover {
-    background: #0b5ed7;
-    transform: translateY(-1px);
-  }
-
-  .quiz-actions .btn:active {
-    transform: translateY(0);
-  }
-
   .quiz-actions .btn[name="action"][value="reset"] {
     background: #6c757d;
   }
 
-  .quiz-actions .btn[name="action"][value="reset"]:hover {
-    background: #5b636a;
-  }
-
-  /* Mobile tweaks */
   @media (max-width: 640px) {
     .question-header {
       flex-direction: column;
       align-items: flex-start;
     }
-
     .play-buttons {
       width: 100%;
     }
-
     .reader-btn {
       flex: 1 1 auto;
-      text-align: center;
     }
-
-    .quiz-actions {
-      justify-content: space-between;
-    }
-
     .quiz-actions .btn {
       flex: 1 1 30%;
-      text-align: center;
     }
   }
 </style>
@@ -188,32 +183,27 @@
         <p><strong>Listening:</strong> question and correct answer only</p>
 
         <div class="play-buttons">
-          <!-- Play current question -->
-          <button type="button"
-                  class="reader-btn"
-                  onclick="bookListenPlayCurrent()">
-            🔊 <span>Play</span>
-          </button>
-
-          <!-- Play all with auto-advance (resumes from current question) -->
-          <button type="button"
-                  class="reader-btn"
-                  onclick="bookListenPlayAll()">
-            🔊 <span>Play All</span>
-          </button>
-
-          <!-- Pause / stop auto-play, remember current question -->
-          <button type="button"
-                  class="reader-btn pause-btn"
-                  onclick="bookListenPause()">
-            ⏸ <span>Pause</span>
-          </button>
+          <button type="button" class="reader-btn" onclick="bookListenPlayCurrent()">🔊 Play</button>
+          <button type="button" class="reader-btn" onclick="bookListenPlayAll()">🔊 Play All</button>
+          <button type="button" class="reader-btn pause-btn" onclick="bookListenPause()">⏸ Pause</button>
         </div>
       </div>
 
-      <p id="qa-counter">
-        Question {{ index }} of {{ total }}
-      </p>
+      <!-- Speed slider -->
+      <div class="speed-control">
+        <label for="tts-speed">
+          Speech speed
+          <span id="tts-speed-value">1.4x</span>
+        </label>
+        <input type="range"
+               id="tts-speed"
+               min="0.5"
+               max="3.0"
+               step="0.1"
+               value="1.4">
+      </div>
+
+      <p id="qa-counter">Question {{ index }} of {{ total }}</p>
 
       <p class="qa-row">
         <strong>Question:</strong>
@@ -226,69 +216,64 @@
 
       <form method="post" class="quiz-actions">
         {% csrf_token %}
-        <button class="btn" name="action" value="prev" type="submit">⬅ Previous</button>
-        <button class="btn" name="action" value="next" type="submit">Next ➡</button>
-        <button class="btn" name="action" value="reset" type="submit">🔁 Reset to start</button>
+        <button class="btn" name="action" value="prev">⬅ Previous</button>
+        <button class="btn" name="action" value="next">Next ➡</button>
+        <button class="btn" name="action" value="reset">🔁 Reset to start</button>
       </form>
 
     </div>
 
-    {# JSON for JS #}
     {{ all_questions|json_script:"all-qa-json" }}
 
     <script>
-      // Pull the questions from the JSON script tag
       const qaJsonEl = document.getElementById("all-qa-json");
-      let qaList = [];
-      if (qaJsonEl) {
-        qaList = JSON.parse(qaJsonEl.textContent);
-      }
+      let qaList = qaJsonEl ? JSON.parse(qaJsonEl.textContent) : [];
 
-      // currentIdx is 0-based; template index is 1-based
       let currentIdx = Number("{{ index|default:1 }}") - 1;
       let autoPlaying = false;
       let currentAudio = null;
+
+      // Speed slider
+      let ttsSpeed = 1.4;
+      const speedSlider = document.getElementById("tts-speed");
+      const speedLabel  = document.getElementById("tts-speed-value");
+
+      speedSlider.addEventListener("input", function() {
+        ttsSpeed = parseFloat(this.value);
+        speedLabel.textContent = ttsSpeed.toFixed(1) + "x";
+      });
 
       function updateVisibleQA(i) {
         if (!qaList.length || i < 0 || i >= qaList.length) return;
 
         const q = qaList[i];
+        document.getElementById("vis-question").innerHTML = q.question_text.replace(/\n/g, "<br>");
+        document.getElementById("vis-answer").innerHTML   = q.correct_answer.replace(/\n/g, "<br>");
 
-        // Update the visible question / answer
-        const qEl = document.getElementById("vis-question");
-        const aEl = document.getElementById("vis-answer");
-        const counterEl = document.getElementById("qa-counter");
-        const statsCounterEl = document.getElementById("stats-counter");
+        document.getElementById("qa-counter").textContent =
+          `Question ${i + 1} of ${qaList.length}`;
 
-        if (qEl) {
-          qEl.innerHTML = (q.question_text || "").replace(/\n/g, "<br>");
-        }
-        if (aEl) {
-          aEl.innerHTML = (q.correct_answer || "").replace(/\n/g, "<br>");
-        }
-        if (counterEl) {
-          counterEl.textContent = `Question ${i + 1} of ${qaList.length}`;
-        }
-        if (statsCounterEl) {
-          statsCounterEl.textContent = `Question ${i + 1} of ${qaList.length}`;
-        }
+        document.getElementById("stats-counter").textContent =
+          `Question ${i + 1} of ${qaList.length}`;
       }
 
       function playOne(idx, keepAuto) {
         if (!qaList.length) return;
-        if (idx < 0 || idx >= qaList.length) return;
 
         autoPlaying = !!keepAuto;
 
-        // stop any previous audio
         if (currentAudio) {
           currentAudio.pause();
           currentAudio = null;
         }
 
         const q = qaList[idx];
-        const text = `Question ${idx + 1}. ${q.question_text}. Correct answer: ${q.correct_answer}.`;
-        const url = "/tts/?text=" + encodeURIComponent(text);
+        const text =
+          `Question ${idx + 1}. ${q.question_text}. Correct answer: ${q.correct_answer}.`;
+
+        const url =
+          "/tts/?text=" + encodeURIComponent(text) +
+          "&speed=" + encodeURIComponent(ttsSpeed.toFixed(2));
 
         const audio = new Audio(url);
         currentAudio = audio;
@@ -298,50 +283,38 @@
             currentIdx++;
             if (currentIdx < qaList.length) {
               updateVisibleQA(currentIdx);
-              playOne(currentIdx, true);  // play next
+              playOne(currentIdx, true);
             } else {
-              autoPlaying = false;  // finished all
+              autoPlaying = false;
             }
           }
         });
 
-        audio.play().catch(err => {
-          console.error("Audio play failed", err);
-        });
+        audio.play().catch(err => console.error("Audio play failed:", err));
       }
 
-      // Play just the current question on screen (from the start of that question)
       function bookListenPlayCurrent() {
         if (!qaList.length) return;
-
         if (currentIdx < 0) currentIdx = 0;
         if (currentIdx >= qaList.length) currentIdx = qaList.length - 1;
-
         updateVisibleQA(currentIdx);
         playOne(currentIdx, false);
       }
 
-      // Play ALL questions, RESUMING from currentIdx.
-      // If currentIdx is invalid (e.g. first time), start from 0.
       function bookListenPlayAll() {
         if (!qaList.length) return;
-
-        if (currentIdx < 0 || currentIdx >= qaList.length) {
+        if (currentIdx < 0 || currentIdx >= qaList.length)
           currentIdx = 0;
-        }
+
         updateVisibleQA(currentIdx);
         playOne(currentIdx, true);
       }
 
-      // Pause playback and stop auto-advance, remembering currentIdx
       function bookListenPause() {
         autoPlaying = false;
-        if (currentAudio) {
-          currentAudio.pause();
-        }
+        if (currentAudio) currentAudio.pause();
       }
 
-      // expose functions to the buttons
       window.bookListenPlayCurrent = bookListenPlayCurrent;
       window.bookListenPlayAll = bookListenPlayAll;
       window.bookListenPause = bookListenPause;
