@@ -4,42 +4,25 @@ import random
 # bookmode/views.py
 from django.shortcuts import render
 
-def book_home(request):
-    return render(request, "bookmode/book_home.html", {})
-
-def book_play(request):
-    mode = request.GET.get("mode", "normal")  # "normal" or "cant"
-    context = {
-        "mode": mode,
-    }
-    return render(request, "bookmode/book_play.html", context)
-
-from django.shortcuts import render
-from .models import BookModeSession
-import random
-
 
 def book_home(request):
     return render(request, "bookmode/book_home.html", {})
-
 
 def book_play(request):
     mode = request.GET.get("mode", "normal")  # "normal" or "cant"
     context = {"mode": mode}
     return render(request, "bookmode/book_play.html", context)
 
-
 def book_listen(request):
     """
-    Simple listening drill:
-    - walks through all BookModeSession questions in id/order_index order
-    - only uses question_text + correct_answer
+    Listening drill:
+    - walks through all BookModeSession questions in order_index (then id)
+    - uses question_text + correct_answer
     - remembers current index in the Django session
     """
-    qs = BookModeSession.objects.order_by("id")
+    qs = BookModeSession.objects.filter(active=True).order_by("order_index", "id")
     total = qs.count()
 
-    # If there are no questions, just show a message
     if total == 0:
         return render(
             request,
@@ -52,29 +35,37 @@ def book_listen(request):
             },
         )
 
-    # Read current index from session
-    idx = request.session.get("listen_index", 0)
+    # current index stored in the session (0-based)
+    idx = request.session.get("book_listen_index", 0)
 
-    # Handle buttons
     if request.method == "POST":
         action = request.POST.get("action")
         if action == "next":
-            idx = (idx + 1) % total
+            idx += 1
         elif action == "prev":
-            idx = (idx - 1) % total
+            idx -= 1
         elif action == "reset":
             idx = 0
 
-        request.session["listen_index"] = idx
+        # clamp into valid range
+        if idx < 0:
+            idx = 0
+        if idx >= total:
+            idx = total - 1
 
-    # Get the current question
-    q = qs[idx]
+        request.session["book_listen_index"] = idx
+
+    question = qs[idx]
+
+    # 👈 NEW: compact list of all questions for JS
+    all_questions = list(
+        qs.values("question_text", "correct_answer")
+    )
 
     context = {
-        "question": q,
+        "question": question,
         "index": idx + 1,      # 1-based for display
         "total": total,
-        "all_questions": qs,  # <-- THIS is what Play All needs
+        "all_questions": all_questions,
     }
     return render(request, "bookmode/book_listen.html", context)
-
