@@ -1,76 +1,255 @@
 {% extends "quiz/base.html" %}
 
 {% block content %}
-<div class="stats-box">
-  <h2>Book listening mode</h2>
-  {% if total > 0 %}
-    <p id="stats-counter">Question {{ index }} of {{ total }}</p>
-  {% else %}
-    <p>No book-mode questions found yet.</p>
-  {% endif %}
-</div>
 
+<style>
+  /* Overall layout */
+  .book-mode-wrapper {
+    max-width: 900px;
+    margin: 0 auto 2rem;
+    padding: 0 1rem;
+  }
 
-{% if question %}
-  <div class="quiz-block">
+  .stats-box {
+    background: #f7f7fb;
+    border-radius: 12px;
+    padding: 1.2rem 1.5rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    margin-bottom: 1rem;
+  }
 
-    <div class="question-header" style="display:flex; align-items:center; justify-content:space-between;">
-      <p><strong>Listening:</strong> question and correct answer only</p>
+  .stats-box h2 {
+    margin: 0 0 .4rem;
+    font-size: 1.4rem;
+  }
 
-      <!-- main play button (current question only) -->
-      <button type="button"
-              class="reader-btn"
-              onclick="bookListenPlayCurrent()">
-        🔊 Play
-      </button>
+  .stats-box p {
+    margin: 0;
+    color: #555;
+  }
 
-      <!-- play all questions with auto-advance -->
-      <button type="button"
-              class="reader-btn"
-              onclick="bookListenPlayAll()">
-        🔊 Play All
-      </button>
-    </div>
+  .quiz-block {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 1.2rem 1.5rem 1.4rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
 
-    <p id="qa-counter">
-      Question {{ index }} of {{ total }}
-    </p>
+  .question-header {
+    margin-bottom: 1rem;
+    gap: 1rem;
+  }
 
-    <p>
-      <strong>Question:</strong>
-      <span id="vis-question">{{ question.question_text|linebreaksbr }}</span>
-    </p>
-    <p>
-      <strong>Correct answer:</strong>
-      <span id="vis-answer">{{ question.correct_answer|linebreaksbr }}</span>
-    </p>
+  .question-header p {
+    margin: 0;
+    font-weight: 600;
+    color: #333;
+  }
 
-    <form method="post" style="margin-top:15px;">
-      {% csrf_token %}
-      <button class="btn" name="action" value="prev" type="submit">⬅ Previous</button>
-      <button class="btn" name="action" value="next" type="submit">Next ➡</button>
-      <button class="btn" name="action" value="reset" type="submit">🔁 Reset to start</button>
-    </form>
+  .play-buttons {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+  }
 
-  </div>
+  .reader-btn {
+    border: none;
+    padding: .5rem 1.1rem;
+    border-radius: 999px;
+    font-size: .95rem;
+    cursor: pointer;
+    background: #0d6efd;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .25rem;
+    transition: background .15s ease, transform .1s ease, box-shadow .15s ease;
+    box-shadow: 0 2px 4px rgba(13,110,253,0.25);
+    white-space: nowrap;
+  }
 
-  <!-- {# Dump all_questions into a hidden <script> as JSON #} -->
-  {{ all_questions|json_script:"all-qa-json" }}
+  .reader-btn:hover {
+    background: #0b5ed7;
+    transform: translateY(-1px);
+  }
 
-  <script>
-    // Pull the questions from the JSON script tag
-    const qaJsonEl = document.getElementById("all-qa-json");
-    let qaList = [];
-    if (qaJsonEl) {
-      qaList = JSON.parse(qaJsonEl.textContent);
+  .reader-btn:active {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+
+  /* Pause button slightly different colour */
+  .reader-btn.pause-btn {
+    background: #6c757d;
+    box-shadow: 0 2px 4px rgba(108,117,125,0.3);
+  }
+
+  .reader-btn.pause-btn:hover {
+    background: #5b636a;
+  }
+
+  #qa-counter {
+    margin: .25rem 0 1rem;
+    font-weight: 500;
+    color: #444;
+  }
+
+  .qa-row {
+    margin-bottom: .6rem;
+  }
+
+  .qa-row strong {
+    display: inline-block;
+    min-width: 110px;
+  }
+
+  .qa-row span {
+    color: #222;
+  }
+
+  .quiz-actions {
+    margin-top: 1.2rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+  }
+
+  .quiz-actions .btn {
+    border-radius: 999px;
+    padding: .45rem 1.1rem;
+    border: none;
+    font-size: .9rem;
+    cursor: pointer;
+    background: #0d6efd;
+    color: #fff;
+    transition: background .15s ease, transform .1s ease;
+  }
+
+  .quiz-actions .btn:hover {
+    background: #0b5ed7;
+    transform: translateY(-1px);
+  }
+
+  .quiz-actions .btn:active {
+    transform: translateY(0);
+  }
+
+  .quiz-actions .btn[name="action"][value="reset"] {
+    background: #6c757d;
+  }
+
+  .quiz-actions .btn[name="action"][value="reset"]:hover {
+    background: #5b636a;
+  }
+
+  /* Mobile tweaks */
+  @media (max-width: 640px) {
+    .question-header {
+      flex-direction: column;
+      align-items: flex-start;
     }
 
-    // currentIdx is 0-based; template index is 1-based
-    let currentIdx = Number("{{ index|default:1 }}") - 1;
-    let autoPlaying = false;
-    let currentAudio = null;
+    .play-buttons {
+      width: 100%;
+    }
 
-    function updateVisibleQA(i) {
+    .reader-btn {
+      flex: 1 1 auto;
+      text-align: center;
+    }
+
+    .quiz-actions {
+      justify-content: space-between;
+    }
+
+    .quiz-actions .btn {
+      flex: 1 1 30%;
+      text-align: center;
+    }
+  }
+</style>
+
+<div class="book-mode-wrapper">
+
+  <div class="stats-box">
+    <h2>Book listening mode</h2>
+    {% if total > 0 %}
+      <p id="stats-counter">Question {{ index }} of {{ total }}</p>
+    {% else %}
+      <p>No book-mode questions found yet.</p>
+    {% endif %}
+  </div>
+
+  {% if question %}
+    <div class="quiz-block">
+
+      <div class="question-header" style="display:flex; align-items:center; justify-content:space-between;">
+        <p><strong>Listening:</strong> question and correct answer only</p>
+
+        <div class="play-buttons">
+          <!-- Play current question -->
+          <button type="button"
+                  class="reader-btn"
+                  onclick="bookListenPlayCurrent()">
+            🔊 <span>Play</span>
+          </button>
+
+          <!-- Play all with auto-advance (resumes from current question) -->
+          <button type="button"
+                  class="reader-btn"
+                  onclick="bookListenPlayAll()">
+            🔊 <span>Play All</span>
+          </button>
+
+          <!-- Pause / stop auto-play, remember current question -->
+          <button type="button"
+                  class="reader-btn pause-btn"
+                  onclick="bookListenPause()">
+            ⏸ <span>Pause</span>
+          </button>
+        </div>
+      </div>
+
+      <p id="qa-counter">
+        Question {{ index }} of {{ total }}
+      </p>
+
+      <p class="qa-row">
+        <strong>Question:</strong>
+        <span id="vis-question">{{ question.question_text|linebreaksbr }}</span>
+      </p>
+      <p class="qa-row">
+        <strong>Correct answer:</strong>
+        <span id="vis-answer">{{ question.correct_answer|linebreaksbr }}</span>
+      </p>
+
+      <form method="post" class="quiz-actions">
+        {% csrf_token %}
+        <button class="btn" name="action" value="prev" type="submit">⬅ Previous</button>
+        <button class="btn" name="action" value="next" type="submit">Next ➡</button>
+        <button class="btn" name="action" value="reset" type="submit">🔁 Reset to start</button>
+      </form>
+
+    </div>
+
+    {# JSON for JS #}
+    {{ all_questions|json_script:"all-qa-json" }}
+
+    <script>
+      // Pull the questions from the JSON script tag
+      const qaJsonEl = document.getElementById("all-qa-json");
+      let qaList = [];
+      if (qaJsonEl) {
+        qaList = JSON.parse(qaJsonEl.textContent);
+      }
+
+      // currentIdx is 0-based; template index is 1-based
+      let currentIdx = Number("{{ index|default:1 }}") - 1;
+      let autoPlaying = false;
+      let currentAudio = null;
+
+      function updateVisibleQA(i) {
         if (!qaList.length || i < 0 || i >= qaList.length) return;
 
         const q = qaList[i];
@@ -82,92 +261,95 @@
         const statsCounterEl = document.getElementById("stats-counter");
 
         if (qEl) {
-            qEl.innerHTML = (q.question_text || "").replace(/\n/g, "<br>");
+          qEl.innerHTML = (q.question_text || "").replace(/\n/g, "<br>");
         }
         if (aEl) {
-            aEl.innerHTML = (q.correct_answer || "").replace(/\n/g, "<br>");
+          aEl.innerHTML = (q.correct_answer || "").replace(/\n/g, "<br>");
         }
         if (counterEl) {
-            counterEl.textContent = `Question ${i + 1} of ${qaList.length}`;
+          counterEl.textContent = `Question ${i + 1} of ${qaList.length}`;
         }
         if (statsCounterEl) {
-            statsCounterEl.textContent = `Question ${i + 1} of ${qaList.length}`;
+          statsCounterEl.textContent = `Question ${i + 1} of ${qaList.length}`;
         }
-     }
-
-
-    function playOne(idx, keepAuto) {
-      if (!qaList.length) return;
-      if (idx < 0 || idx >= qaList.length) return;
-
-      autoPlaying = !!keepAuto;
-
-      // stop any previous audio
-      if (currentAudio) {
-        currentAudio.pause();
-        currentAudio = null;
       }
 
-      const q = qaList[idx];
-      const text = `Question ${idx + 1}. ${q.question_text}. Correct answer: ${q.correct_answer}.`;
-      const url = "/tts/?text=" + encodeURIComponent(text);
+      function playOne(idx, keepAuto) {
+        if (!qaList.length) return;
+        if (idx < 0 || idx >= qaList.length) return;
 
-      const audio = new Audio(url);
-      currentAudio = audio;
+        autoPlaying = !!keepAuto;
 
-      audio.addEventListener("ended", function () {
-        if (autoPlaying) {
-          currentIdx++;
-          if (currentIdx < qaList.length) {
-            updateVisibleQA(currentIdx);
-            playOne(currentIdx, true);  // play next
-          } else {
-            autoPlaying = false;  // finished all
-          }
+        // stop any previous audio
+        if (currentAudio) {
+          currentAudio.pause();
+          currentAudio = null;
         }
-      });
 
-      audio.play().catch(err => {
-        console.error("Audio play failed", err);
-      });
-    }
+        const q = qaList[idx];
+        const text = `Question ${idx + 1}. ${q.question_text}. Correct answer: ${q.correct_answer}.`;
+        const url = "/tts/?text=" + encodeURIComponent(text);
 
-    // Play just the current question on screen
-    function bookListenPlayCurrent() {
-      if (!qaList.length) return;
+        const audio = new Audio(url);
+        currentAudio = audio;
 
-      if (currentIdx < 0) currentIdx = 0;
-      if (currentIdx >= qaList.length) currentIdx = qaList.length - 1;
+        audio.addEventListener("ended", function () {
+          if (autoPlaying) {
+            currentIdx++;
+            if (currentIdx < qaList.length) {
+              updateVisibleQA(currentIdx);
+              playOne(currentIdx, true);  // play next
+            } else {
+              autoPlaying = false;  // finished all
+            }
+          }
+        });
 
-      updateVisibleQA(currentIdx);
-      playOne(currentIdx, false);
-    }
+        audio.play().catch(err => {
+          console.error("Audio play failed", err);
+        });
+      }
 
-    // Play ALL questions from the beginning, auto-advancing UI + counter
-    function bookListenPlayAll() {
-      if (!qaList.length) return;
+      // Play just the current question on screen (from the start of that question)
+      function bookListenPlayCurrent() {
+        if (!qaList.length) return;
 
-      currentIdx = 0;
-      updateVisibleQA(currentIdx);
-      playOne(currentIdx, true);
-    }
+        if (currentIdx < 0) currentIdx = 0;
+        if (currentIdx >= qaList.length) currentIdx = qaList.length - 1;
 
-    // expose functions to the buttons
-    window.bookListenPlayCurrent = bookListenPlayCurrent;
-    window.bookListenPlayAll = bookListenPlayAll;
-  </script>
+        updateVisibleQA(currentIdx);
+        playOne(currentIdx, false);
+      }
 
-  <!-- {# If you ever want auto-play on load, uncomment this and it will
-     play the current question as soon as the page loads (after a user interaction on mobile): #}
-  {#  -->
-  <script>
-    window.addEventListener('load', function () {
-      bookListenPlayCurrent();
-    });
-  </script>
+      // Play ALL questions, RESUMING from currentIdx.
+      // If currentIdx is invalid (e.g. first time), start from 0.
+      function bookListenPlayAll() {
+        if (!qaList.length) return;
 
+        if (currentIdx < 0 || currentIdx >= qaList.length) {
+          currentIdx = 0;
+        }
+        updateVisibleQA(currentIdx);
+        playOne(currentIdx, true);
+      }
 
-{% else %}
-  <p>You don’t have any BookModeSession questions yet.</p>
-{% endif %}
+      // Pause playback and stop auto-advance, remembering currentIdx
+      function bookListenPause() {
+        autoPlaying = false;
+        if (currentAudio) {
+          currentAudio.pause();
+        }
+      }
+
+      // expose functions to the buttons
+      window.bookListenPlayCurrent = bookListenPlayCurrent;
+      window.bookListenPlayAll = bookListenPlayAll;
+      window.bookListenPause = bookListenPause;
+    </script>
+
+  {% else %}
+    <p>You don’t have any BookModeSession questions yet.</p>
+  {% endif %}
+
+</div>
 {% endblock %}
