@@ -90,3 +90,6 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 SESSION_COOKIE_SAMESITE = None
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
+
+SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
+
