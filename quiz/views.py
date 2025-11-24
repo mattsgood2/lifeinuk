@@ -88,8 +88,15 @@ def practice_menu(request):
 @user_passes_test(lambda u: u.is_authenticated and u.is_staff)
 def upload_questions(request):
     """
-    Upload a plain text file containing Q:/A: blocks.
-    Subcategory is taken automatically from the filename.
+    Upload a plain text file containing Q&A blocks.
+
+    Accepted formats (all OK):
+
+    Q: When was the Magna Carta signed?
+    A: 1215.
+
+    question: When was the Magna Carta signed?
+    answer: 1215.
     """
     if request.method == "POST":
         form = UploadFileForm(request.POST, request.FILES)
@@ -99,62 +106,80 @@ def upload_questions(request):
             file_obj = request.FILES["file"]
             content = file_obj.read().decode("utf-8", errors="ignore")
 
-            created = 0
-            current_q = None
-            current_a = None
-
-            # Derive subcategory from filename (e.g. `06_georgian_and_victorian.txt`)
+            # Derive subcategory from filename
             filename = file_obj.name
             base, _ = os.path.splitext(filename)
             subcategory = base.replace("_", " ").title().strip()
 
-            for line in content.splitlines():
-                line = line.strip()
+            parsed = 0
+            created = 0
+            updated = 0
+            current_q = None
+            current_a = None
+
+            def save_pair(q_text, a_text):
+                nonlocal parsed, created, updated
+                if not q_text or not a_text:
+                    return
+                parsed += 1
+                q_clean = q_text.strip()
+                a_clean = a_text.strip()
+
+                obj, was_created = Question.objects.update_or_create(
+                    # question text as the unique-ish key (case-insensitive)
+                    question_text__iexact=q_clean,
+                    defaults={
+                        "question_text": q_clean,
+                        "answer_text": a_clean,
+                        "topic": topic,
+                        "category": category,
+                        "subcategory": subcategory,
+                    },
+                )
+                if was_created:
+                    created += 1
+                else:
+                    updated += 1
+
+            # Accept: "Q:", "question:", "A:", "answer:" (any case, optional spaces)
+            q_pattern = re.compile(r"^\s*(question|q)\s*:", re.IGNORECASE)
+            a_pattern = re.compile(r"^\s*(answer|a)\s*:", re.IGNORECASE)
+
+            for raw_line in content.splitlines():
+                line = raw_line.strip()
                 if not line:
                     continue
 
-                if line.startswith("Q:"):
-                    # save previous Q/A pair if we have one
+                if q_pattern.match(line):
+                    # save previous pair
                     if current_q and current_a:
-                        Question.objects.create(
-                            question_text=current_q.strip(),
-                            answer_text=current_a.strip(),
-                            topic=topic,
-                            category=category,
-                            subcategory=subcategory,
-                        )
-                        created += 1
-                    current_q = line[2:].strip()
+                        save_pair(current_q, current_a)
+                    current_q = line.split(":", 1)[1].strip()
                     current_a = None
 
-                elif line.startswith("A:"):
-                    current_a = line[2:].strip()
+                elif a_pattern.match(line):
+                    current_a = line.split(":", 1)[1].strip()
 
                 else:
-                    # continuation line
+                    # continuation lines
                     if current_a is not None:
                         current_a += "\n" + line
                     elif current_q is not None:
                         current_q += "\n" + line
 
-            # flush last Q/A pair
+            # flush last pair
             if current_q and current_a:
-                Question.objects.create(
-                    question_text=current_q.strip(),
-                    answer_text=current_a.strip(),
-                    topic=topic,
-                    category=category,
-                    subcategory=subcategory,
-                )
-                created += 1
+                save_pair(current_q, current_a)
 
-            messages.success(request, f"Imported {created} questions.")
+            messages.success(
+                request,
+                f"Parsed {parsed} Q/A pairs. Created {created}, updated {updated}."
+            )
             return redirect("practice_menu")
     else:
         form = UploadFileForm()
 
     return render(request, "quiz/upload.html", {"form": form})
-
 
 # ----------------- MULTIPLE-CHOICE PRACTICE -----------------
 
