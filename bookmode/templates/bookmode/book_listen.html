@@ -3,6 +3,8 @@
 {% block content %}
 
 <style>
+
+
   /* Overall layout */
   .book-mode-wrapper {
     max-width: 900px;
@@ -202,6 +204,69 @@
       flex: 1 1 30%;
     }
   }
+    /* CATEGORY / SECTION FILTER */
+  .filter-bar {
+    margin-top: .75rem;
+  }
+
+  .filter-label {
+    font-size: .9rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: .3rem;
+  }
+
+  .filter-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    align-items: center;
+  }
+
+  .filter-select {
+    flex: 1 1 180px;
+    max-width: 260px;
+    padding: .45rem .9rem;
+    border-radius: 999px;
+    border: 1px solid #ced4da;
+    font-size: .9rem;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+
+  .filter-btn {
+    border: none;
+    border-radius: 999px;
+    padding: .45rem 1.2rem;
+    font-size: .85rem;
+    cursor: pointer;
+    background: #0d6efd;
+    color: #fff;
+    transition: background .15s ease, transform .1s ease, box-shadow .15s ease;
+    box-shadow: 0 2px 4px rgba(13,110,253,0.25);
+    white-space: nowrap;
+  }
+
+  .filter-btn:hover {
+    background: #0b5ed7;
+    transform: translateY(-1px);
+  }
+
+  @media (max-width: 640px) {
+    .filter-controls {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .filter-select {
+      max-width: 100%;
+    }
+    .filter-btn {
+      width: 100%;
+      text-align: center;
+    }
+  }
+
+  
 </style>
 
 <div class="book-mode-wrapper">
@@ -215,25 +280,65 @@
     {% endif %}
 
         <!-- CATEGORY FILTER -->
-    <form method="get" class="filter-bar">
-  <label for="category-select">Section:</label>
-  <select name="category" id="category-select">
-    <option value="">All sections</option>
+       <!-- SECTION FILTER -->
+   <!-- SECTION FILTER (matches style with main UI) -->
+<!-- SECTION FILTER -->
+<form method="get" style="margin-top: 0.75rem;">
+  <label for="section-select"
+         style="font-size: 0.9rem;
+                font-weight: 600;
+                color: #333;
+                display: block;
+                margin-bottom: 0.25rem;">
+    Section:
+  </label>
 
-    {% if categories %}
-      {% for cat in categories %}
-        <option value="{{ cat }}"
-          {% if selected_category == cat %}selected{% endif %}>
-          {{ cat|title }}
-        </option>
-      {% endfor %}
-    {% else %}
-      <option value="" disabled>(no sections set yet)</option>
-    {% endif %}
-  </select>
+  <div style="display: flex;
+              flex-direction: column;
+              gap: 0.4rem;
+              max-width: 100%;">
+    
+    <select id="section-select"
+            name="category"
+            style="padding: 6px 10px;
+                   font-size: 0.9rem;
+                   border-radius: 6px;
+                   border: 1px solid #ced4da;
+                   width: 100%;
+                   max-width: 100%;
+                   box-sizing: border-box;
+                   display: block;">
+      <option value="">All sections</option>
+      {% if categories %}
+        {% for cat in categories %}
+          <option value="{{ cat }}"
+            {% if selected_category == cat %}selected{% endif %}>
+            {{ cat|title }}
+          </option>
+        {% endfor %}
+      {% else %}
+        <option value="" disabled>(no sections set yet)</option>
+      {% endif %}
+    </select>
 
-  <button type="submit">Apply</button>
+    <button type="submit"
+            style="border: none;
+                   border-radius: 999px;
+                   padding: 0.4rem 1.1rem;
+                   font-size: 0.85rem;
+                   cursor: pointer;
+                   background: #0d6efd;
+                   color: #fff;
+                   box-shadow: 0 2px 4px rgba(13,110,253,0.25);
+                   white-space: nowrap;
+                   align-self: flex-start;">
+      Apply
+    </button>
+  </div>
 </form>
+
+
+    <!-- END SECTION FILTER -->
 
 
     <!-- END CATEGORY FILTER -->
