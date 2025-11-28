@@ -1,5 +1,6 @@
 # quiz/admin.py
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.db import transaction
 from django.db.models import Max
 import re
 
@@ -19,6 +20,8 @@ def normalise(text: str) -> str:
     t = re.sub(r"\s+", " ", t)        # collapse multiple spaces
     return t.lower()
 
+
+# ------------------ ACTION 1: COPY BOOK QUESTIONS → BOOKMODE ------------------ #
 
 @admin.action(description="Copy all Book-Based Questions → Book Listening Mode")
 def copy_book_based_to_bookmode(modeladmin, request, queryset=None):
@@ -59,12 +62,15 @@ def copy_book_based_to_bookmode(modeladmin, request, queryset=None):
     for q in qs.order_by("id"):
         norm_key = normalise(q.question_text)
 
+        # Clean the answer a bit (strip trailing .?! etc)
+        cleaned_answer = (q.answer_text or "").strip().rstrip(".!?").strip()
+
         if norm_key in existing_by_norm:
             # UPDATE existing BookModeSession
             session = existing_by_norm[norm_key]
 
             session.question_text = q.question_text
-            session.correct_answer = q.answer_text[:255]
+            session.correct_answer = cleaned_answer[:255]
             session.distractors = ""
             session.section = (q.subcategory or "")[:100]
             session.active = True
@@ -77,7 +83,7 @@ def copy_book_based_to_bookmode(modeladmin, request, queryset=None):
             order += 1
             session = BookModeSession.objects.create(
                 question_text=q.question_text,
-                correct_answer=q.answer_text[:255],
+                correct_answer=cleaned_answer[:255],
                 distractors="",
                 order_index=order,
                 section=(q.subcategory or "")[:100],
@@ -92,9 +98,90 @@ def copy_book_based_to_bookmode(modeladmin, request, queryset=None):
     )
 
 
+# --------------- ACTION 2: CLEAN "(extended variant N)" IN QUIZ --------------- #
+
+@admin.action(description="Clean '(extended variant N)' duplicates in quiz")
+def clean_extended_variants(modeladmin, request, queryset):
+    """
+    Admin action to clean up Question rows like:
+      'Some text (extended variant 1)'
+
+    Behaviour:
+    - If a clean base question exists (without the suffix), delete all variants
+      and any extra base duplicates, keep ONE base.
+    - If no base exists, rename one variant to the base text and delete the rest.
+    """
+
+    pattern = re.compile(r"\s*\(extended variant \d+\)$")
+
+    # We ignore the queryset and operate on ALL variant rows
+    variant_qs = list(
+        Question.objects.filter(
+            question_text__regex=r"\(extended variant [0-9]+\)$"
+        ).order_by("question_text", "id")
+    )
+
+    if not variant_qs:
+        messages.info(request, "No '(extended variant N)' questions found.")
+        return
+
+    # Group by base_text (question without the suffix)
+    groups = {}  # base_text -> [variant rows]
+    for q in variant_qs:
+        base_text = pattern.sub("", q.question_text).strip()
+        groups.setdefault(base_text, []).append(q)
+
+    to_delete_ids = []
+    changed_count = 0
+
+    with transaction.atomic():
+        for base_text, variants in groups.items():
+            # Find any existing clean base questions
+            base_qs = list(
+                Question.objects.filter(question_text=base_text).order_by("id")
+            )
+
+            if base_qs:
+                # We already have at least one clean base entry
+                base = base_qs[0]  # keep this one
+
+                # Any extra base duplicates are redundant
+                extra_base_ids = [b.id for b in base_qs[1:]]
+
+                # All these variant rows are redundant too
+                variant_ids = [v.id for v in variants]
+
+                to_delete_ids.extend(extra_base_ids + variant_ids)
+
+            else:
+                # No clean base exists:
+                # - keep the first variant, rename it to the base text
+                # - delete the rest
+                keeper = variants[0]
+                if keeper.question_text != base_text:
+                    keeper.question_text = base_text
+                    keeper.save(update_fields=["question_text"])
+                    changed_count += 1
+
+                extra_variant_ids = [v.id for v in variants[1:]]
+                to_delete_ids.extend(extra_variant_ids)
+
+        deleted = Question.objects.filter(id__in=to_delete_ids).delete()[0]
+
+    messages.success(
+        request,
+        f"Cleaned extended variants: converted {changed_count} questions, "
+        f"deleted {deleted} redundant rows."
+    )
+
+
+# ------------------------------ QUESTION ADMIN ------------------------------- #
+
 @admin.register(Question)
 class QuestionAdmin(admin.ModelAdmin):
     list_display = ("question_text", "category", "subcategory", "topic")
     list_filter = ("category", "topic", "subcategory")
     search_fields = ("question_text", "answer_text")
-    actions = [copy_book_based_to_bookmode]   # <-- action appears in Question admin
+
+    # BOTH actions available on the Question admin
+    actions = [copy_book_based_to_bookmode, clean_extended_variants]
