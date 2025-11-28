@@ -99,12 +99,11 @@ def copy_book_based_to_bookmode(modeladmin, request, queryset=None):
 
 
 # --------------- ACTION 2: CLEAN "(extended variant N)" IN QUIZ --------------- #
-
 @admin.action(description="Clean '(extended variant N)' duplicates in quiz")
 def clean_extended_variants(modeladmin, request, queryset):
     """
     Admin action to clean up Question rows like:
-      'Some text (extended variant 1)'
+      'Some text (Extended Variant 1)'
 
     Behaviour:
     - If a clean base question exists (without the suffix), delete all variants
@@ -112,12 +111,13 @@ def clean_extended_variants(modeladmin, request, queryset):
     - If no base exists, rename one variant to the base text and delete the rest.
     """
 
-    pattern = re.compile(r"\s*\(extended variant \d+\)$")
+    # Case-insensitive pattern: '(extended variant 123)' at the end
+    pattern = re.compile(r"\s*\(extended variant \d+\)$", re.IGNORECASE)
 
-    # We ignore the queryset and operate on ALL variant rows
+    # Use iregex so it's also case-insensitive in the DB filter
     variant_qs = list(
         Question.objects.filter(
-            question_text__regex=r"\(extended variant [0-9]+\)$"
+            question_text__iregex=r"\(extended variant [0-9]+\)$"
         ).order_by("question_text", "id")
     )
 
@@ -173,7 +173,6 @@ def clean_extended_variants(modeladmin, request, queryset):
         f"Cleaned extended variants: converted {changed_count} questions, "
         f"deleted {deleted} redundant rows."
     )
-
 
 # ------------------------------ QUESTION ADMIN ------------------------------- #
 
