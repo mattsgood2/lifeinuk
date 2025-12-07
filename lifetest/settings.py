@@ -9,7 +9,11 @@ SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key")
 
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost", "192.168.0.77", "lifeinuktest-d53498dddafc.herokuapp.com",]
+ALLOWED_HOSTS = ["127.0.0.1",
+                 "localhost", 
+                 "192.168.0.77", 
+                 "lifeinuktest-d53498dddafc.herokuapp.com",
+                 "localhost",]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://192.168.0.77:8000",
