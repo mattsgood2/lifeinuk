@@ -13,12 +13,15 @@ ALLOWED_HOSTS = ["127.0.0.1",
                  "localhost", 
                  "192.168.0.77", 
                  "lifeinuktest-d53498dddafc.herokuapp.com",
+                 "100.82.222.92",
                  "localhost",]
 
 CSRF_TRUSTED_ORIGINS = [
-    "http://192.168.0.77:8000",
-    "http://192.168.0.77"
+    "http://192.168.0.244:8000",
+    "http://192.168.0.244"
     "http://localhost:8000",
+    "http://100.82.222.92:8000",
+    "http://100.82.222.92",
     "https://lifeinuktest-d53498dddafc.herokuapp.com",
     
     ]
